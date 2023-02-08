@@ -1,3 +1,4 @@
+import type { ErrorBoundaryComponent } from '@remix-run/node'
 import { Link, useCatch, useTransition } from '@remix-run/react'
 import { Logo } from '../components/Icon'
 
@@ -54,7 +55,7 @@ export function CatchBoundary() {
   )
 }
 
-export function ErrorBoundary({ error }) {
+export const ErrorBoundary: ErrorBoundaryComponent = ({ error }) => {
   console.log({ error: error.message })
   return (
     <div className="grid h-screen w-full place-items-center bg-black bg-opacity-40 bg-[url('https://media1.popsugar-assets.com/files/thumbor/hD4DY5UeYUO_rmi7BbQw05P03vw/fit-in/2048xorig/filters:format_auto-!!-:strip_icc-!!-/2019/05/19/288/n/1922283/3c59feec5ce2412a2a2935.47224303__6_Courtesy_of_HBO/i/Why-Daenerys-Targaryen-Death-So-Damn-LAME.jpg')] bg-cover bg-center bg-no-repeat text-white bg-blend-overlay">

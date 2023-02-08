@@ -1,4 +1,7 @@
-export function Logo({ color }) {
+type Props = {
+  color?: 'white' | 'black'
+}
+export function Logo({ color }: Props) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

@@ -5,13 +5,14 @@ import {
   Link,
   useCatch,
 } from '@remix-run/react'
+import type { ActionArgs, ErrorBoundaryComponent } from '@remix-run/node'
 import { redirect } from '@remix-run/node'
 import badRequest from '~/utils/badRequest'
 import { getUserSession, storage } from '~/utils/session.server'
 import { Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
 
-function validateDifficulty(choice) {
+function validateDifficulty(choice: null | FormDataEntryValue) {
   if (choice === null) {
     return 'Select a level to continue'
   }
@@ -23,7 +24,7 @@ export function headers() {
   }
 }
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   // validation
   const formData = await request.formData()
   const difficulty = formData.get('difficulty')
@@ -79,8 +80,8 @@ export async function action({ request }) {
   let slugIndex = Math.floor(Math.random() * firstTen.length)
   const firstQuestion = firstTen[slugIndex]
 
-  const userQuestionsArray = []
-  const attemptedSlugsArray = []
+  const userQuestionsArray: string[] = []
+  const attemptedSlugsArray: string[] = []
 
   session.set('slugs', firstTen)
   session.set('userChoices', userQuestionsArray)
@@ -183,7 +184,7 @@ export function CatchBoundary() {
   )
 }
 
-export function ErrorBoundary({ error }) {
+export const ErrorBoundary: ErrorBoundaryComponent = ({ error }) => {
   console.log({ error: error.message })
   return (
     <div className="grid h-screen w-full place-items-center bg-black bg-opacity-40 bg-[url('https://media1.popsugar-assets.com/files/thumbor/hD4DY5UeYUO_rmi7BbQw05P03vw/fit-in/2048xorig/filters:format_auto-!!-:strip_icc-!!-/2019/05/19/288/n/1922283/3c59feec5ce2412a2a2935.47224303__6_Courtesy_of_HBO/i/Why-Daenerys-Targaryen-Death-So-Damn-LAME.jpg')] bg-cover bg-center bg-no-repeat text-white bg-blend-overlay">

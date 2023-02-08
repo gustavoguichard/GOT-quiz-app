@@ -1,4 +1,7 @@
-export function validateEmail(email, isEmailInUse) {
+export function validateEmail(
+  email: FormDataEntryValue | null,
+  isEmailInUse?: boolean,
+) {
   if (email === null) {
     return 'Email cannot be empty'
   } else if (typeof email !== 'string') {
@@ -8,7 +11,7 @@ export function validateEmail(email, isEmailInUse) {
   }
 }
 
-export function validatePassword(password) {
+export function validatePassword(password: FormDataEntryValue | null) {
   if (password === null) {
     return 'Password cannot be empty'
   } else if (password.length < 7) {
@@ -18,7 +21,7 @@ export function validatePassword(password) {
   }
 }
 
-export function validateUsername(username) {
+export function validateUsername(username: FormDataEntryValue | null) {
   if (username === null) {
     return 'Username cannot be empty'
   } else if (typeof username !== 'string') {

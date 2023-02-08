@@ -8,7 +8,7 @@
     "dev": "run-p \"dev:*\"",
     "dev:css": "npm run generate:css -- --watch",
     "dev:remix": "remix dev",
-    "generate:css": "npx tailwindcss -o ./app/tailwind.css",
+    "generate:css": "npx tailwindcss -o ./app/styles/app.css",
     "start": "cross-env NODE_ENV=production netlify dev"
   },
   "dependencies": {
@@ -26,11 +26,18 @@
     "@remix-run/dev": "^1.12.0",
     "@remix-run/eslint-config": "^1.12.0",
     "@remix-run/serve": "^1.12.0",
+    "@types/bcryptjs": "^2.4.2",
+    "@types/react": "^18.0.27",
+    "@types/react-dom": "^18.0.10",
+    "@typescript-eslint/eslint-plugin": "^5.51.0",
+    "@typescript-eslint/parser": "^5.51.0",
     "eslint": "^8.33.0",
+    "eslint-config-prettier": "^8.6.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.8.4",
     "prettier-plugin-tailwindcss": "^0.2.2",
-    "tailwindcss": "^3.2.6"
+    "tailwindcss": "^3.2.6",
+    "typescript": "^4.9.5"
   },
   "engines": {
     "node": ">=14"

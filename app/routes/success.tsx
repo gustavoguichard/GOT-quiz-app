@@ -1,4 +1,9 @@
 import { Form, Link, Outlet, useCatch, useLoaderData } from '@remix-run/react'
+import type {
+  ActionArgs,
+  ErrorBoundaryComponent,
+  LoaderArgs,
+} from '@remix-run/node'
 import { redirect } from '@remix-run/node'
 import { Logo } from '~/components/Icon'
 import { getUserSession, storage } from '~/utils/session.server'
@@ -9,7 +14,7 @@ export function meta() {
   }
 }
 
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const session = await getUserSession(request)
   const sessionDifficulty = session.get('difficulty')
   const userChoices = session.get('userChoices')
@@ -36,9 +41,9 @@ export async function loader({ request }) {
     })
   }
 
-  const correctAnswers = userChoices.map((userChoice) => {
+  const correctAnswers = userChoices.map((userChoice: any) => {
     const matchedQuestions = questions.result.filter(
-      (question) =>
+      (question: any) =>
         question._id === userChoice.userQuestion &&
         question.answer === userChoice.userChoice,
     )
@@ -49,7 +54,7 @@ export async function loader({ request }) {
   return correctAnswers
 }
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const session = await getUserSession(request)
   const formData = await request.formData()
   const action = formData.get('_action')
@@ -66,7 +71,7 @@ export async function action({ request }) {
 
 export default function Success() {
   const data = useLoaderData()
-  const correct = data.filter((q) => q.length !== 0)
+  const correct = data.filter((q: any) => q.length !== 0)
   const percentage = Math.round((correct.length / data.length) * 100)
 
   return (
@@ -114,7 +119,7 @@ export default function Success() {
   )
 }
 
-function ProgressRing({ percentage }) {
+function ProgressRing({ percentage }: { percentage: number }) {
   const circumference = Math.PI * 45 * 2
   const dash = (percentage * circumference) / 100
 
@@ -138,7 +143,7 @@ function ProgressRing({ percentage }) {
             : 'text-green-600'
         }`}
         strokeWidth={5}
-        strokeDasharray={[dash, circumference - dash]}
+        strokeDasharray={[dash, circumference - dash] as any}
         transform={`rotate(-90 50 50)`}
         strokeLinecap="round"
         stroke="currentColor"
@@ -183,7 +188,7 @@ export function CatchBoundary() {
   )
 }
 
-export function ErrorBoundary({ error }) {
+export const ErrorBoundary: ErrorBoundaryComponent = ({ error }) => {
   console.log({ error: error.message })
   return (
     <div className="grid h-screen w-full place-items-center bg-black bg-opacity-40 bg-[url('https://media1.popsugar-assets.com/files/thumbor/hD4DY5UeYUO_rmi7BbQw05P03vw/fit-in/2048xorig/filters:format_auto-!!-:strip_icc-!!-/2019/05/19/288/n/1922283/3c59feec5ce2412a2a2935.47224303__6_Courtesy_of_HBO/i/Why-Daenerys-Targaryen-Death-So-Damn-LAME.jpg')] bg-cover bg-center bg-no-repeat text-white bg-blend-overlay">

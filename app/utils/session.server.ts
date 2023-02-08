@@ -10,7 +10,7 @@ import bcrypt from 'bcryptjs'
 // If the passwords don't match return null
 // If passwords match return the user
 
-export async function login(email, password) {
+export async function login(email: string, password: string) {
   const query = `*[_type == 'user' && email == '${email}']{email, username, password, _id}`
   const queryUrl = 'https://n2tvwman.api.sanity.io/v1/data/query/production'
   const url = `${queryUrl}?query=${encodeURIComponent(query)}`
@@ -49,7 +49,7 @@ export const storage = createCookieSessionStorage({
   },
 })
 
-export async function createUserSession(userId, redirectTo) {
+export async function createUserSession(userId: string, redirectTo: string) {
   const session = await storage.getSession()
   session.set('userId', userId)
   return redirect(redirectTo, {
@@ -59,11 +59,11 @@ export async function createUserSession(userId, redirectTo) {
   })
 }
 
-export function getUserSession(request) {
+export function getUserSession(request: Request) {
   return storage.getSession(request.headers.get('Cookie'))
 }
 
-export async function getUserId(request) {
+export async function getUserId(request: Request) {
   const session = await getUserSession(request)
   const userId = session.get('userId')
   if (!userId || typeof userId !== 'string') return null
@@ -71,7 +71,7 @@ export async function getUserId(request) {
 }
 
 export async function requireUserId(
-  request,
+  request: Request,
   redirectTo = new URL(request.url).pathname,
 ) {
   const session = await getUserSession(request)
@@ -83,7 +83,7 @@ export async function requireUserId(
   return userId
 }
 
-export async function getUser(request) {
+export async function getUser(request: Request) {
   const userId = await getUserId(request)
   if (typeof userId !== 'string') {
     return null
@@ -100,7 +100,7 @@ export async function getUser(request) {
   }
 }
 
-export async function logout(request) {
+export async function logout(request: Request) {
   const session = await storage.getSession(request.headers.get('Cookie'))
   return redirect('/login', {
     headers: {
@@ -109,7 +109,11 @@ export async function logout(request) {
   })
 }
 
-export async function addItemToStorage(request, itemKey, itemValue) {
+export async function addItemToStorage(
+  request: Request,
+  itemKey: string,
+  itemValue: unknown,
+) {
   const session = await getUserSession(request)
   //const session = await storage.getSession();
   session.set(itemKey, itemValue)

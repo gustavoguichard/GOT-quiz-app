@@ -6,6 +6,11 @@ import {
   useCatch,
   useSubmit,
 } from '@remix-run/react'
+import type {
+  LoaderArgs,
+  ActionArgs,
+  ErrorBoundaryComponent,
+} from '@remix-run/node'
 import { redirect, json } from '@remix-run/node'
 import { useId, useRef, useState } from 'react'
 import { CountdownCircleTimer } from 'react-countdown-circle-timer'
@@ -34,7 +39,7 @@ import Spinner from '~/components/Spinner'
 // Set the question and answer to session
 // Navigate to the next question
 
-export async function loader({ request, params }) {
+export async function loader({ request, params }: LoaderArgs) {
   const currentSlug = params.slug
 
   const questionQuery = `*[_type == 'question' && slug.current == '${currentSlug}']{question, choices, _id}`
@@ -67,7 +72,7 @@ export async function loader({ request, params }) {
   session.set('attemptedSlugsArray', attemptedSlugsArray)
 
   const userChoice = userChoices.find(
-    (element) => element.userQuestionSlug === currentSlug,
+    (element: any) => element.userQuestionSlug === currentSlug,
   )
   if (userChoice) {
     return json(
@@ -102,7 +107,7 @@ export async function loader({ request, params }) {
   )
 }
 
-export async function action({ request, params }) {
+export async function action({ request, params }: ActionArgs) {
   const currentSlug = params.slug
 
   const formData = await request.formData()
@@ -115,7 +120,7 @@ export async function action({ request, params }) {
   const userQuestionsArray = session.get('userChoices')
 
   const currentSlugIndex = slugs.findIndex(
-    (element) => element.slug.current === currentSlug,
+    (element: any) => element.slug.current === currentSlug,
   )
 
   if (currentSlugIndex !== -1) {
@@ -123,7 +128,7 @@ export async function action({ request, params }) {
   }
 
   const attemptedQuestionIndex = userQuestionsArray.findIndex(
-    (element) => element.userQuestionSlug === currentSlug,
+    (element: any) => element.userQuestionSlug === currentSlug,
   )
 
   if (attemptedQuestionIndex !== -1) {
@@ -178,7 +183,7 @@ export default function Question() {
 
   const formRef = useRef(null)
 
-  const [checkedState, setCheckedState] = useState(null)
+  const [checkedState, setCheckedState] = useState<string>()
 
   const timerDuration =
     difficulty === 'Easy' ? 40 : difficulty === 'Intermediate' ? 30 : 20
@@ -225,7 +230,7 @@ export default function Question() {
         <p className="mt-10 text-3xl ">{question[0].question}</p>
         <input type="hidden" value={question[0]._id} name="questionId" />
         <div className="mt-3">
-          {question[0].choices.map((choice, index) => (
+          {question[0].choices.map((choice: any, index: number) => (
             <div key={index}>
               <RadioInput
                 choice={choice}
@@ -234,7 +239,7 @@ export default function Question() {
                 setCheckedState={setCheckedState}
                 userChoice={userChoice?.userChoice}
               />{' '}
-              <label htmlFor={index} className="ml-2 text-lg">
+              <label htmlFor={String(index)} className="ml-2 text-lg">
                 {choice}
               </label>
             </div>
@@ -266,20 +271,27 @@ export default function Question() {
   )
 }
 
+type RadioInputProps = {
+  choice: string
+  index: number
+  checkedState?: string
+  setCheckedState: (id: string) => void
+  userChoice: string | undefined
+}
 function RadioInput({
   choice,
   index,
   checkedState,
   setCheckedState,
   userChoice,
-}) {
+}: RadioInputProps) {
   const id = useId()
   return (
     <input
       type="radio"
       name="choice"
       value={choice}
-      id={index}
+      id={String(index)}
       checked={checkedState === id || userChoice === choice}
       onChange={(e) => setCheckedState(id)}
     />
@@ -306,7 +318,7 @@ export function CatchBoundary() {
   )
 }
 
-export function ErrorBoundary({ error }) {
+export const ErrorBoundary: ErrorBoundaryComponent = ({ error }) => {
   console.log({ error: error.message })
   return (
     <div className="grid h-screen w-full place-items-center bg-black bg-opacity-40 bg-[url('https://media1.popsugar-assets.com/files/thumbor/hD4DY5UeYUO_rmi7BbQw05P03vw/fit-in/2048xorig/filters:format_auto-!!-:strip_icc-!!-/2019/05/19/288/n/1922283/3c59feec5ce2412a2a2935.47224303__6_Courtesy_of_HBO/i/Why-Daenerys-Targaryen-Death-So-Damn-LAME.jpg')] bg-cover bg-center bg-no-repeat text-white bg-blend-overlay">

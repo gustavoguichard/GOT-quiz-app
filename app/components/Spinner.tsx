@@ -1,9 +1,6 @@
 export default function Spinner() {
   return (
-    <div
-      className={` opacity-100 transition-opacity
-                `}
-    >
+    <div className="opacity-100 transition-opacity">
       <svg
         className="-ml-1 mr-3 h-5 w-5 animate-spin"
         xmlns="http://www.w3.org/2000/svg"

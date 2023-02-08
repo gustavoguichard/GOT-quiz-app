@@ -6,7 +6,7 @@ import {
   Scripts,
   ScrollRestoration,
 } from '@remix-run/react'
-import styles from './tailwind.css'
+import styles from '~/styles/app.css'
 
 export function meta() {
   return { title: 'Game of Thrones quiz' }
@@ -22,11 +22,7 @@ export default function App() {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="true"
-        />
+        <link rel="preconnect" href="https://fonts.gstatic.com" />
         <link
           href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap"
           rel="stylesheet"
