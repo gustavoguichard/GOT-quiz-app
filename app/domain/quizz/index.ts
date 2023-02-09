@@ -1,0 +1,3 @@
+const QUESTIONS_COUNT = 10
+
+export { QUESTIONS_COUNT }

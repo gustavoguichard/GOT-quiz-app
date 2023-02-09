@@ -3,6 +3,7 @@ import * as z from 'zod'
 import { sanityQuery } from '~/services/sanity'
 import { sessionSchema } from '~/utils/session.server'
 import { difficultyMap } from '~/domain/difficulty.server'
+import { difficultySchema } from '../difficulty'
 
 const questionSchema = z.object({
   _id: z.string(),
@@ -41,4 +42,21 @@ const getQuestion = makeDomainFunction(
   }
 })
 
-export { getQuestion, getQuestions, questionSchema }
+const getRandomSlugs = makeDomainFunction(
+  z.object({ difficulty: difficultySchema }),
+)(async ({ difficulty }) => {
+  const difficultyRef = difficultyMap.get(difficulty)
+  const slugs = await sanityQuery(
+    `*[_type == 'question' && references('${difficultyRef}')]`,
+    z.object({ slug: z.object({ current: z.string() }) }),
+  )
+
+  return {
+    slugs: slugs
+      .map((value) => ({ value, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ value }) => value.slug.current),
+  }
+})
+
+export { getQuestion, getQuestions, getRandomSlugs, questionSchema }

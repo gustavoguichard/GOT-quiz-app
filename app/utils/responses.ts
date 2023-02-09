@@ -2,8 +2,10 @@ import type { TypedResponse } from '@remix-run/node'
 import { json } from '@remix-run/node'
 import type { Result } from 'domain-functions'
 
-function badRequest(data: unknown) {
-  return json(data, { status: 400 })
+function badRequest() {
+  return new Response('Bad request', {
+    status: 400,
+  })
 }
 
 function loaderResponseOrThrow<T extends Result<unknown>>(

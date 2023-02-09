@@ -19,6 +19,7 @@ import { cx } from '~/utils/common'
 import { loaderResponseOrThrow } from '~/utils/responses'
 import { getQuestionData } from '~/domain/route-data.server'
 import { difficultyTimerMap } from '~/domain/difficulty'
+import { QUESTIONS_COUNT } from '~/domain/quizz'
 
 export async function loader({ request, params }: LoaderArgs) {
   const session = await getUserSession(request)
@@ -41,9 +42,7 @@ export async function action({ request, params }: ActionArgs) {
   const session = await getUserSession(request)
   const { slugs, userChoices } = getTypedSession(session)
 
-  const currentSlugIndex = slugs.findIndex(
-    (element) => element.slug.current === params.slug,
-  )
+  const currentSlugIndex = slugs.findIndex((slug) => slug === params.slug)
 
   if (currentSlugIndex !== -1) {
     slugs.splice(currentSlugIndex, 1)
@@ -79,7 +78,7 @@ export async function action({ request, params }: ActionArgs) {
     })
   }
   let slugIndex = Math.floor(Math.random() * slugs.length)
-  let nextSlug = slugs[slugIndex].slug.current
+  let nextSlug = slugs[slugIndex]
 
   session.set('slugs', slugs)
 
@@ -91,13 +90,8 @@ export async function action({ request, params }: ActionArgs) {
 }
 
 export default () => {
-  const {
-    question,
-    numberOfQuestions,
-    userChoice,
-    attemptedCount,
-    difficulty,
-  } = useLoaderData<typeof loader>()
+  const { question, userChoice, attemptedCount, difficulty } =
+    useLoaderData<typeof loader>()
 
   const transition = useTransition()
   const submit = useSubmit()
@@ -162,7 +156,7 @@ export default () => {
         </button>
       </Form>
       <span className="mt-4 flex justify-center">
-        {attemptedCount} / {numberOfQuestions}
+        {attemptedCount} / {QUESTIONS_COUNT}
       </span>
       <div className="mt-8 flex gap-2">
         <ArrowLeftIcon />{' '}

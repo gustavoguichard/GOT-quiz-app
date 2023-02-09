@@ -1,20 +1,14 @@
 import { Form, useTransition } from '@remix-run/react'
 import type { ActionArgs } from '@remix-run/node'
 import { redirect } from '@remix-run/node'
-import badRequest from '~/utils/badRequest'
 import { getUserSession, storage } from '~/utils/session.server'
 import { Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
 import { cx } from '~/utils/common'
-import { sanityQuery } from '~/services/sanity'
-import * as z from 'zod'
-import { getDifficultyReference } from '~/domain/difficulty'
-
-function validateDifficulty(choice: null | FormDataEntryValue) {
-  if (choice === null) {
-    return 'Select a level to continue'
-  }
-}
+import { badRequest } from '~/utils/responses'
+import { inputFromForm } from 'domain-functions'
+import { setDifficultyData } from '~/domain/route-data.server'
+import { QUESTIONS_COUNT } from '~/domain/quizz'
 
 export function headers() {
   return {
@@ -23,55 +17,16 @@ export function headers() {
 }
 
 export async function action({ request }: ActionArgs) {
-  // validation
-  const formData = await request.formData()
-  const difficulty = formData.get('difficulty')
-  const difficultyFieldError = {
-    name: validateDifficulty(difficulty),
-  }
-
-  if (Object.values(difficultyFieldError).some(Boolean)) {
-    return badRequest({ difficultyFieldError })
-  }
-
   const session = await getUserSession(request)
-  session.set('difficulty', difficulty)
+  const result = await setDifficultyData(await inputFromForm(request))
+  if (!result.success) throw badRequest()
 
-  let difficultyRefecence = getDifficultyReference(difficulty as string)
+  session.set('difficulty', result.data.difficulty)
+  session.set('slugs', result.data.slugs.slice(0, QUESTIONS_COUNT))
+  session.set('userChoices', [])
+  session.set('attemptedSlugsArray', [])
 
-  const slugs = await sanityQuery(
-    `*[_type == 'question' && references('${difficultyRefecence}')]`,
-    z.object({ slug: z.object({ current: z.string() }) }),
-  )
-
-  if (!slugs) {
-    throw new Response('There was an error fetching data', {
-      status: 404,
-    })
-  }
-
-  let firstTen = []
-
-  for (let index = 0; index < 10; index++) {
-    let randomIndex = Math.floor(Math.random() * slugs.length)
-    firstTen.push(slugs[randomIndex])
-    slugs.splice(randomIndex, 1)
-  }
-
-  const numberOfQuestions = firstTen.length
-  session.set('numberOfQuestions', numberOfQuestions)
-
-  let slugIndex = Math.floor(Math.random() * firstTen.length)
-  const firstQuestion = firstTen[slugIndex]
-
-  const userQuestionsArray: string[] = []
-  const attemptedSlugsArray: string[] = []
-
-  session.set('slugs', firstTen)
-  session.set('userChoices', userQuestionsArray)
-  session.set('attemptedSlugsArray', attemptedSlugsArray)
-
-  return redirect(`/questions/${firstQuestion.slug.current}`, {
+  return redirect(`/questions/${result.data.slugs.at(0)}`, {
     headers: {
       'Set-Cookie': await storage.commitSession(session),
     },

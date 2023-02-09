@@ -70,11 +70,7 @@ export async function envFromSession(request: Request) {
 export const sessionSchema = z.object({
   attemptedSlugsArray: z.array(z.string()).optional().default([]),
   difficulty: difficultySchema.optional(),
-  numberOfQuestions: z.number().optional().default(10),
-  slugs: z
-    .array(z.object({ slug: z.object({ current: z.string() }) }))
-    .optional()
-    .default([]),
+  slugs: z.array(z.string()).optional().default([]),
   userChoices: z
     .array(
       z.object({
@@ -86,7 +82,6 @@ export const sessionSchema = z.object({
     .optional()
     .default([]),
 })
-export type SessionData = z.infer<typeof sessionSchema>
 export function getTypedSession(session: Session) {
   return sessionSchema.parse(session.data)
 }
