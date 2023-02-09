@@ -24,5 +24,21 @@ const getQuestions = makeDomainFunction(
   return { questions }
 })
 
+const getQuestion = makeDomainFunction(
+  z.object({ slug: z.string() }),
+  sessionSchema,
+)(async ({ slug }, { userChoices }) => {
+  const questions = await sanityQuery(
+    `*[_type == 'question' && slug.current == '${slug}']`,
+    questionSchema,
+  )
+  const userChoice =
+    userChoices.find(({ userQuestionSlug }) => userQuestionSlug === slug)
+      ?.userChoice ?? null
+  return {
+    question: questions.at(0)!,
+    userChoice,
+  }
+})
 
-export { getQuestions, questionSchema }
+export { getQuestion, getQuestions, questionSchema }

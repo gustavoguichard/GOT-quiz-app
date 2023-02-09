@@ -7,9 +7,7 @@ import {
 } from '@remix-run/react'
 import type { LoaderArgs, ActionArgs } from '@remix-run/node'
 import { redirect, json } from '@remix-run/node'
-import { useId, useRef, useState } from 'react'
 import { CountdownCircleTimer } from 'react-countdown-circle-timer'
-import type { SessionData } from '~/utils/session.server'
 import {
   getTypedSession,
   getUserSession,
@@ -18,93 +16,21 @@ import {
 import { ArrowLeftIcon, Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
 import { cx } from '~/utils/common'
-import { sanityQuery } from '~/services/sanity'
-import * as z from 'zod'
-
-// Should I use useMatches instead?????🤔🤔
-//
-//
-//
-//
-//
-// Save slugs to the cookie session and cycle through them **DONE**✅
-//
-// Get a random slug from the session when next is clicked **DONE** ✅
-//
-// Check if the slug has been used. If so, remove it from the session ✅
-//
-// You can add a next question slug to a question in Sanity(Alternative way to load next question)
-//
-// Display a single question and it's choices✅
-//
-//
-//
-// Set the question and answer to session
-// Navigate to the next question
+import { loaderResponseOrThrow } from '~/utils/responses'
+import { getQuestionData } from '~/domain/route-data.server'
+import { difficultyTimerMap } from '~/domain/difficulty'
 
 export async function loader({ request, params }: LoaderArgs) {
-  const question = await sanityQuery(
-    `*[_type == 'question' && slug.current == '${params.slug}']`,
-    z.object({
-      _id: z.string(),
-      choices: z.array(z.string()),
-      question: z.string(),
-    }),
-  )
-
-  if (!question) {
-    throw new Response('There was an error fetching data', {
-      status: 404,
-    })
-  }
   const session = await getUserSession(request)
-  const { numberOfQuestions, attemptedSlugsArray, userChoices, difficulty } =
-    getTypedSession(session)
+  const result = await getQuestionData(params, session.data)
+  if (!result.success) return loaderResponseOrThrow(result)
 
-  // This is used to set the current position in the questions e.g 1/10
-  if (attemptedSlugsArray.includes(params.slug!)) {
-    attemptedSlugsArray.pop()
-  } else {
-    attemptedSlugsArray.push(params.slug!)
-  }
-
-  session.set('attemptedSlugsArray', attemptedSlugsArray)
-
-  const userChoice = userChoices.find(
-    (element) => element.userQuestionSlug === params.slug,
-  )
-  if (userChoice) {
-    return json(
-      {
-        question,
-        numberOfQuestions,
-        userChoice,
-        attemptedSlugsArray,
-        difficulty,
-      },
-      {
-        headers: {
-          'Set-Cookie': await storage.commitSession(session),
-        },
-      },
-    )
-  }
-
-  return json(
-    {
-      question,
-      numberOfQuestions,
-      attemptedSlugsArray,
-      difficulty,
-      userChoice: null,
+  session.set('attemptedSlugsArray', result.data.attemptedSlugsArray)
+  return json(result.data, {
+    headers: {
+      'Set-Cookie': await storage.commitSession(session),
     },
-    {
-      headers: {
-        'Cache-Control': 'private maxage=86400',
-        'Set-Cookie': await storage.commitSession(session),
-      },
-    },
-  )
+  })
 }
 
 export async function action({ request, params }: ActionArgs) {
@@ -164,33 +90,22 @@ export async function action({ request, params }: ActionArgs) {
   })
 }
 
-export default function Question() {
+export default () => {
   const {
     question,
     numberOfQuestions,
     userChoice,
-    attemptedSlugsArray,
+    attemptedCount,
     difficulty,
   } = useLoaderData<typeof loader>()
 
   const transition = useTransition()
-
   const submit = useSubmit()
 
-  const formRef = useRef(null)
-
-  const [checkedState, setCheckedState] = useState<string>()
-
-  const timerDuration =
-    difficulty === 'Easy' ? 40 : difficulty === 'Intermediate' ? 30 : 20
+  const timerDuration = difficultyTimerMap.get(difficulty)!
 
   function handleSubmit() {
-    submit(
-      {
-        questionId: question[0]._id,
-      },
-      { method: 'post' },
-    )
+    submit({ questionId: question._id }, { method: 'post' })
   }
 
   return (
@@ -199,12 +114,7 @@ export default function Question() {
         <Logo />
       </div>
       <div className="absolute top-56 right-1/2 -z-10 h-72 w-72 rounded-full bg-[#FF512F] bg-opacity-50 blur-[140px]" />
-      <Form
-        method="post"
-        className="flex flex-col"
-        ref={formRef}
-        key={question[0]._id}
-      >
+      <Form method="post" className="flex flex-col" key={question._id}>
         <div className="mt-10">
           <CountdownCircleTimer
             isPlaying
@@ -223,19 +133,19 @@ export default function Question() {
             {({ remainingTime }) => remainingTime}
           </CountdownCircleTimer>
         </div>
-        <p className="mt-10 text-3xl ">{question[0].question}</p>
-        <input type="hidden" value={question[0]._id} name="questionId" />
+        <p className="mt-10 text-3xl ">{question.question}</p>
+        <input type="hidden" value={question._id} name="questionId" />
         <div className="mt-3">
-          {question[0].choices.map((choice, index: number) => (
+          {question.choices.map((choice, index: number) => (
             <div key={index}>
-              <RadioInput
-                choice={choice}
-                index={index}
-                checkedState={checkedState}
-                setCheckedState={setCheckedState}
-                userChoice={userChoice?.userChoice ?? null}
+              <input
+                type="radio"
+                name="choice"
+                value={choice}
+                id={choice}
+                defaultChecked={userChoice === choice}
               />{' '}
-              <label htmlFor={String(index)} className="ml-2 text-lg">
+              <label htmlFor={choice} className="ml-2 text-lg">
                 {choice}
               </label>
             </div>
@@ -252,7 +162,7 @@ export default function Question() {
         </button>
       </Form>
       <span className="mt-4 flex justify-center">
-        {attemptedSlugsArray.length} / {numberOfQuestions}
+        {attemptedCount} / {numberOfQuestions}
       </span>
       <div className="mt-8 flex gap-2">
         <ArrowLeftIcon />{' '}
@@ -265,32 +175,5 @@ export default function Question() {
         <span className="font-semibold">{difficulty}</span>
       </span>
     </main>
-  )
-}
-
-type RadioInputProps = {
-  choice: string
-  index: number
-  checkedState?: string
-  setCheckedState: (id: string) => void
-  userChoice: SessionData['userChoices'][number]['userChoice']
-}
-function RadioInput({
-  choice,
-  index,
-  checkedState,
-  setCheckedState,
-  userChoice,
-}: RadioInputProps) {
-  const id = useId()
-  return (
-    <input
-      type="radio"
-      name="choice"
-      value={choice}
-      id={String(index)}
-      checked={checkedState === id || userChoice === choice}
-      onChange={(e) => setCheckedState(id)}
-    />
   )
 }
