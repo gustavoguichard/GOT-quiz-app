@@ -8,18 +8,16 @@ import {
 import type { LoaderArgs, ActionArgs } from '@remix-run/node'
 import { redirect, json } from '@remix-run/node'
 import { CountdownCircleTimer } from 'react-countdown-circle-timer'
-import {
-  getTypedSession,
-  getUserSession,
-  storage,
-} from '~/utils/session.server'
+import { getUserSession, storage } from '~/utils/session.server'
 import { ArrowLeftIcon, Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
 import { cx } from '~/utils/common'
-import { loaderResponseOrThrow } from '~/utils/responses'
+import { badRequest, loaderResponseOrThrow } from '~/utils/responses'
 import { getQuestionData } from '~/domain/route-data.server'
 import { difficultyTimerMap } from '~/domain/difficulty'
 import { QUESTIONS_COUNT } from '~/domain/quizz'
+import { inputFromForm } from 'domain-functions'
+import { setUserChoice } from '~/domain/questions.server'
 
 export async function loader({ request, params }: LoaderArgs) {
   const session = await getUserSession(request)
@@ -35,54 +33,15 @@ export async function loader({ request, params }: LoaderArgs) {
 }
 
 export async function action({ request, params }: ActionArgs) {
-  const formData = await request.formData()
-  const userChoice = formData.get('choice')
-  const userQuestion = formData.get('questionId')
-
   const session = await getUserSession(request)
-  const { slugs, userChoices } = getTypedSession(session)
+  const input = await inputFromForm(request)
+  const result = await setUserChoice({ ...input, ...params }, session.data)
+  if (!result.success) throw badRequest()
 
-  const currentSlugIndex = slugs.findIndex((slug) => slug === params.slug)
+  session.set('userChoices', result.data.userChoices)
+  session.set('slugs', result.data.slugs)
 
-  if (currentSlugIndex !== -1) {
-    slugs.splice(currentSlugIndex, 1)
-  }
-
-  const attemptedQuestionIndex = userChoices.findIndex(
-    (element) => element.userQuestionSlug === params.slug,
-  )
-
-  if (attemptedQuestionIndex !== -1) {
-    userChoices.splice(attemptedQuestionIndex, 1)
-  }
-
-  const userChoiceObj = {
-    userChoice: userChoice as string,
-    userQuestion: userQuestion as string,
-    userQuestionSlug: params.slug!,
-  }
-
-  userChoices.push(userChoiceObj)
-  session.set('userChoices', userChoices)
-
-  //////////////////////////////////////////////////////////////////////////////////
-
-  // Get a slug from the session at random and delete it after being used so that it doesn't repeat
-  // Redirect to  results page after the last question
-
-  if (slugs.length === 0) {
-    return redirect('/success', {
-      headers: {
-        'Set-Cookie': await storage.commitSession(session),
-      },
-    })
-  }
-  let slugIndex = Math.floor(Math.random() * slugs.length)
-  let nextSlug = slugs[slugIndex]
-
-  session.set('slugs', slugs)
-
-  return redirect(`/questions/${nextSlug}`, {
+  return redirect(result.data.nextUrl, {
     headers: {
       'Set-Cookie': await storage.commitSession(session),
     },

@@ -1,10 +1,8 @@
 import { environment } from '~/environment.server'
-import type { Session } from '@remix-run/node'
 import { redirect, createCookieSessionStorage } from '@remix-run/node'
 import bcrypt from 'bcryptjs'
 import { difficultySchema } from '~/domain/difficulty'
 import * as z from 'zod'
-//import { getClient } from "~/lib/sanity/getClient";
 
 // Login logic
 //
@@ -82,9 +80,6 @@ export const sessionSchema = z.object({
     .optional()
     .default([]),
 })
-export function getTypedSession(session: Session) {
-  return sessionSchema.parse(session.data)
-}
 
 export async function logout(request: Request) {
   const session = await storage.getSession(request.headers.get('Cookie'))
