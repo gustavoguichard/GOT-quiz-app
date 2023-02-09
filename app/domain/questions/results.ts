@@ -19,5 +19,15 @@ const userQAndA = makeDomainFunction(
 
 const getUserResults = pipe(getQuestions, userQAndA)
 
+const getResultsCount = map(getUserResults, ({ results }) => {
+  const correctCount = results.filter(
+    (result) => result.answer === result.userChoice,
+  ).length
+  return {
+    answersCount: results.length,
+    correctCount,
+    percentage: Math.round((correctCount / results.length) * 100),
+  }
+})
 
-export { getQuestions, getUserResults }
+export { getQuestions, getUserResults, getResultsCount }

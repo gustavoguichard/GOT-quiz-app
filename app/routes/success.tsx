@@ -2,15 +2,11 @@ import { Form, Link, Outlet, useLoaderData } from '@remix-run/react'
 import type { ActionArgs, LoaderArgs } from '@remix-run/node'
 import { redirect } from '@remix-run/node'
 import { Logo } from '~/components/Icon'
-import {
-  getTypedSession,
-  getUserSession,
-  storage,
-} from '~/utils/session.server'
+import { envFromSession, getUserSession, storage } from '~/utils/session.server'
 import { cx } from '~/utils/common'
-import { sanityQuery } from '~/services/sanity'
-import * as z from 'zod'
-import { getDifficultyReference } from '~/domain/difficulty'
+import { getResultsCount } from '~/domain/questions.server'
+import { loaderResponseOrThrow } from '~/utils/responses'
+import { inputFromForm } from 'domain-functions'
 
 export function meta() {
   return {
@@ -19,39 +15,15 @@ export function meta() {
 }
 
 export async function loader({ request }: LoaderArgs) {
-  const session = await getUserSession(request)
-  const { difficulty, userChoices } = getTypedSession(session)
-
-  let difficultyRefecence = getDifficultyReference(difficulty!)
-  const questions = await sanityQuery(
-    `*[_type == "question" && references('${difficultyRefecence}')]`,
-    z.object({ answer: z.string(), _id: z.string() }),
-  )
-  if (!questions) {
-    throw new Response('There was an error fetching data', {
-      status: 404,
-    })
-  }
-
-  const correctAnswers = userChoices.map((userChoice) => {
-    const matchedQuestions = questions.filter(
-      (question) =>
-        question._id === userChoice.userQuestion &&
-        question.answer === userChoice.userChoice,
-    )
-
-    return matchedQuestions
-  })
-
-  return correctAnswers
+  const result = await getResultsCount(null, await envFromSession(request))
+  return loaderResponseOrThrow(result)
 }
 
 export async function action({ request }: ActionArgs) {
   const session = await getUserSession(request)
-  const formData = await request.formData()
-  const action = formData.get('_action')
+  const input = await inputFromForm(request)
 
-  if (action === 'clear') {
+  if (input._action === 'clear') {
     return redirect('/difficulty', {
       headers: {
         'Set-Cookie': await storage.destroySession(session),
@@ -61,10 +33,9 @@ export async function action({ request }: ActionArgs) {
   return null
 }
 
-export default function Success() {
-  const data = useLoaderData<typeof loader>()
-  const correct = data.filter((q) => q.length !== 0)
-  const percentage = Math.round((correct.length / data.length) * 100)
+export default () => {
+  const { answersCount, correctCount, percentage } =
+    useLoaderData<typeof loader>()
 
   return (
     <main className="mx-auto px-8 pb-16 text-gray-800 sm:w-4/5 sm:px-0 xl:max-w-4xl">
@@ -81,10 +52,9 @@ export default function Success() {
               </div>
               <div className="space-y-4">
                 <span className="">
-                  You got{' '}
-                  <span className="font-semibold">{correct.length}</span> out of{' '}
-                  <span className="font-semibold">{data.length}</span> questions
-                  correct
+                  You got <span className="font-semibold">{correctCount}</span>{' '}
+                  out of <span className="font-semibold">{answersCount}</span>{' '}
+                  questions correct
                 </span>
                 <Link to="/success/results" className="block underline">
                   View results
