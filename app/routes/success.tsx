@@ -2,7 +2,11 @@ import { Form, Link, Outlet, useLoaderData } from '@remix-run/react'
 import type { ActionArgs, LoaderArgs } from '@remix-run/node'
 import { redirect } from '@remix-run/node'
 import { Logo } from '~/components/Icon'
-import { getUserSession, storage } from '~/utils/session.server'
+import {
+  getTypedSession,
+  getUserSession,
+  storage,
+} from '~/utils/session.server'
 import { cx } from '~/utils/common'
 import { sanityQuery } from '~/services/sanity'
 import * as z from 'zod'
@@ -16,12 +20,11 @@ export function meta() {
 
 export async function loader({ request }: LoaderArgs) {
   const session = await getUserSession(request)
-  const sessionDifficulty = session.get('difficulty')
-  const userChoices = session.get('userChoices')
+  const { difficulty, userChoices } = getTypedSession(session)
 
-  let difficulty = getDifficultyReference(sessionDifficulty)
+  let difficultyRefecence = getDifficultyReference(difficulty!)
   const questions = await sanityQuery(
-    `*[_type == "question" && references('${difficulty}')]`,
+    `*[_type == "question" && references('${difficultyRefecence}')]`,
     z.object({ answer: z.string(), _id: z.string() }),
   )
   if (!questions) {
@@ -30,9 +33,9 @@ export async function loader({ request }: LoaderArgs) {
     })
   }
 
-  const correctAnswers = userChoices.map((userChoice: any) => {
+  const correctAnswers = userChoices.map((userChoice) => {
     const matchedQuestions = questions.filter(
-      (question: any) =>
+      (question) =>
         question._id === userChoice.userQuestion &&
         question.answer === userChoice.userChoice,
     )
@@ -60,7 +63,7 @@ export async function action({ request }: ActionArgs) {
 
 export default function Success() {
   const data = useLoaderData<typeof loader>()
-  const correct = data.filter((q: any) => q.length !== 0)
+  const correct = data.filter((q) => q.length !== 0)
   const percentage = Math.round((correct.length / data.length) * 100)
 
   return (

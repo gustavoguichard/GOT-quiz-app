@@ -9,7 +9,12 @@ import type { LoaderArgs, ActionArgs } from '@remix-run/node'
 import { redirect, json } from '@remix-run/node'
 import { useId, useRef, useState } from 'react'
 import { CountdownCircleTimer } from 'react-countdown-circle-timer'
-import { getUserSession, storage } from '~/utils/session.server'
+import type { SessionData } from '~/utils/session.server'
+import {
+  getTypedSession,
+  getUserSession,
+  storage,
+} from '~/utils/session.server'
 import { ArrowLeftIcon, Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
 import { cx } from '~/utils/common'
@@ -53,23 +58,20 @@ export async function loader({ request, params }: LoaderArgs) {
     })
   }
   const session = await getUserSession(request)
-
-  const numberOfQuestions = session.get('numberOfQuestions')
-  const attemptedSlugsArray = session.get('attemptedSlugsArray')
-  const userChoices = session.get('userChoices')
-  const difficulty = session.get('difficulty')
+  const { numberOfQuestions, attemptedSlugsArray, userChoices, difficulty } =
+    getTypedSession(session)
 
   // This is used to set the current position in the questions e.g 1/10
-  if (attemptedSlugsArray.includes(params.currentSlug)) {
+  if (attemptedSlugsArray.includes(params.slug!)) {
     attemptedSlugsArray.pop()
   } else {
-    attemptedSlugsArray.push(params.currentSlug)
+    attemptedSlugsArray.push(params.slug!)
   }
 
   session.set('attemptedSlugsArray', attemptedSlugsArray)
 
   const userChoice = userChoices.find(
-    (element: any) => element.userQuestionSlug === params.currentSlug,
+    (element) => element.userQuestionSlug === params.slug,
   )
   if (userChoice) {
     return json(
@@ -106,41 +108,37 @@ export async function loader({ request, params }: LoaderArgs) {
 }
 
 export async function action({ request, params }: ActionArgs) {
-  const currentSlug = params.slug
-
   const formData = await request.formData()
   const userChoice = formData.get('choice')
   const userQuestion = formData.get('questionId')
 
   const session = await getUserSession(request)
-  const slugs = session.get('slugs')
-
-  const userQuestionsArray = session.get('userChoices')
+  const { slugs, userChoices } = getTypedSession(session)
 
   const currentSlugIndex = slugs.findIndex(
-    (element: any) => element.slug.current === currentSlug,
+    (element) => element.slug.current === params.slug,
   )
 
   if (currentSlugIndex !== -1) {
     slugs.splice(currentSlugIndex, 1)
   }
 
-  const attemptedQuestionIndex = userQuestionsArray.findIndex(
-    (element: any) => element.userQuestionSlug === currentSlug,
+  const attemptedQuestionIndex = userChoices.findIndex(
+    (element) => element.userQuestionSlug === params.slug,
   )
 
   if (attemptedQuestionIndex !== -1) {
-    userQuestionsArray.splice(attemptedQuestionIndex, 1)
+    userChoices.splice(attemptedQuestionIndex, 1)
   }
 
   const userChoiceObj = {
-    userChoice,
-    userQuestion,
-    userQuestionSlug: currentSlug,
+    userChoice: userChoice as string,
+    userQuestion: userQuestion as string,
+    userQuestionSlug: params.slug!,
   }
 
-  userQuestionsArray.push(userChoiceObj)
-  session.set('userChoices', userQuestionsArray)
+  userChoices.push(userChoiceObj)
+  session.set('userChoices', userChoices)
 
   //////////////////////////////////////////////////////////////////////////////////
 
@@ -228,14 +226,14 @@ export default function Question() {
         <p className="mt-10 text-3xl ">{question[0].question}</p>
         <input type="hidden" value={question[0]._id} name="questionId" />
         <div className="mt-3">
-          {question[0].choices.map((choice: any, index: number) => (
+          {question[0].choices.map((choice, index: number) => (
             <div key={index}>
               <RadioInput
                 choice={choice}
                 index={index}
                 checkedState={checkedState}
                 setCheckedState={setCheckedState}
-                userChoice={userChoice?.userChoice}
+                userChoice={userChoice?.userChoice ?? null}
               />{' '}
               <label htmlFor={String(index)} className="ml-2 text-lg">
                 {choice}
@@ -275,7 +273,7 @@ type RadioInputProps = {
   index: number
   checkedState?: string
   setCheckedState: (id: string) => void
-  userChoice: string | undefined
+  userChoice: SessionData['userChoices'][number]['userChoice']
 }
 function RadioInput({
   choice,
