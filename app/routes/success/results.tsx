@@ -2,24 +2,16 @@ import type { LoaderArgs } from '@remix-run/node'
 import { json } from '@remix-run/node'
 import { useLoaderData } from '@remix-run/react'
 import { XIcon } from '~/components/Icon'
-import { environment } from '~/environment.server'
 import { sanityQuery } from '~/services/sanity'
 import { getUserSession } from '~/utils/session.server'
 import * as z from 'zod'
+import { getDifficultyReference } from '~/domain/difficulty'
 
 export async function loader({ request }: LoaderArgs) {
   const session = await getUserSession(request)
   const sessionDifficulty = session.get('difficulty')
   const userChoices = session.get('userChoices')
-
-  let difficulty =
-    sessionDifficulty === 'Easy'
-      ? environment().SANITY_DIFFICULTY_EASY
-      : sessionDifficulty === 'Intermediate'
-      ? environment().SANITY_DIFFICULTY_INTERMEDIATE
-      : sessionDifficulty === 'Legendary'
-      ? environment().SANITY_DIFFICULTY_LEGENDARY
-      : null
+  let difficulty = getDifficultyReference(sessionDifficulty)
 
   const questions = await sanityQuery(
     `*[_type == "question" && references('${difficulty}')]`,

@@ -3,10 +3,10 @@ import type { ActionArgs, LoaderArgs } from '@remix-run/node'
 import { redirect } from '@remix-run/node'
 import { Logo } from '~/components/Icon'
 import { getUserSession, storage } from '~/utils/session.server'
-import { environment } from '~/environment.server'
 import { cx } from '~/utils/common'
 import { sanityQuery } from '~/services/sanity'
 import * as z from 'zod'
+import { getDifficultyReference } from '~/domain/difficulty'
 
 export function meta() {
   return {
@@ -19,15 +19,7 @@ export async function loader({ request }: LoaderArgs) {
   const sessionDifficulty = session.get('difficulty')
   const userChoices = session.get('userChoices')
 
-  let difficulty =
-    sessionDifficulty === 'Easy'
-      ? environment().SANITY_DIFFICULTY_EASY
-      : sessionDifficulty === 'Intermediate'
-      ? environment().SANITY_DIFFICULTY_INTERMEDIATE
-      : sessionDifficulty === 'Legendary'
-      ? environment().SANITY_DIFFICULTY_LEGENDARY
-      : null
-
+  let difficulty = getDifficultyReference(sessionDifficulty)
   const questions = await sanityQuery(
     `*[_type == "question" && references('${difficulty}')]`,
     z.object({ answer: z.string(), _id: z.string() }),

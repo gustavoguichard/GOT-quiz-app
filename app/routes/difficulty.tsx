@@ -5,10 +5,10 @@ import badRequest from '~/utils/badRequest'
 import { getUserSession, storage } from '~/utils/session.server'
 import { Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
-import { environment } from '~/environment.server'
 import { cx } from '~/utils/common'
 import { sanityQuery } from '~/services/sanity'
 import * as z from 'zod'
+import { getDifficultyReference } from '~/domain/difficulty'
 
 function validateDifficulty(choice: null | FormDataEntryValue) {
   if (choice === null) {
@@ -37,14 +37,7 @@ export async function action({ request }: ActionArgs) {
   const session = await getUserSession(request)
   session.set('difficulty', difficulty)
 
-  let difficultyRefecence =
-    difficulty === 'Easy'
-      ? environment().SANITY_DIFFICULTY_EASY
-      : difficulty === 'Intermediate'
-      ? environment().SANITY_DIFFICULTY_INTERMEDIATE
-      : difficulty === 'Legendary'
-      ? environment().SANITY_DIFFICULTY_LEGENDARY
-      : null
+  let difficultyRefecence = getDifficultyReference(difficulty as string)
 
   const slugs = await sanityQuery(
     `*[_type == 'question' && references('${difficultyRefecence}')]`,
@@ -85,7 +78,7 @@ export async function action({ request }: ActionArgs) {
   })
 }
 
-export default function Difficulty() {
+export default () => {
   const transition = useTransition()
 
   return (
