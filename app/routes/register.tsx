@@ -2,12 +2,12 @@ import { Link, useActionData } from '@remix-run/react'
 import type { ActionArgs } from '@remix-run/node'
 import { redirect } from '@remix-run/node'
 import bcrypt from 'bcryptjs'
-import badRequest from '~/utils/badRequest'
 import {
   validateEmail,
   validatePassword,
   validateUsername,
 } from '~/utils/validation'
+import { badRequest } from '~/utils/responses'
 
 export async function action({ request }: ActionArgs) {
   const formData = await request.formData()

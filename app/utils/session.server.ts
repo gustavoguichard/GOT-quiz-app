@@ -62,7 +62,12 @@ export function getUserSession(request: Request) {
   return storage.getSession(request.headers.get('Cookie'))
 }
 
-const sessionSchema = z.object({
+export async function envFromSession(request: Request) {
+  const session = await getUserSession(request)
+  return session.data
+}
+
+export const sessionSchema = z.object({
   attemptedSlugsArray: z.array(z.string()).optional().default([]),
   difficulty: difficultySchema.optional(),
   numberOfQuestions: z.number().optional().default(10),
