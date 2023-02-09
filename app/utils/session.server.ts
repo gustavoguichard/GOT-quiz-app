@@ -1,3 +1,4 @@
+import { environment } from '~/environment.server'
 import { redirect, createCookieSessionStorage } from '@remix-run/node'
 import bcrypt from 'bcryptjs'
 //import { getClient } from "~/lib/sanity/getClient";
@@ -32,7 +33,7 @@ export async function login(email: string, password: string) {
   return registeredUser.result[0]
 }
 
-const sessionSecret = process.env.SESSION_SECRET
+const sessionSecret = environment().SESSION_SECRET
 if (!sessionSecret) {
   throw new Error('SESSION_SECRET must be set')
 }

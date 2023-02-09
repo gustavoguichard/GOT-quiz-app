@@ -2,6 +2,7 @@ import type { LoaderArgs } from '@remix-run/node'
 import { json } from '@remix-run/node'
 import { useLoaderData } from '@remix-run/react'
 import { XIcon } from '~/components/Icon'
+import { environment } from '~/environment.server'
 import { getUserSession } from '~/utils/session.server'
 
 export async function loader({ request }: LoaderArgs) {
@@ -11,16 +12,16 @@ export async function loader({ request }: LoaderArgs) {
 
   let difficulty =
     sessionDifficulty === 'Easy'
-      ? process.env.SANITY_DIFFICULTY_EASY
+      ? environment().SANITY_DIFFICULTY_EASY
       : sessionDifficulty === 'Intermediate'
-      ? process.env.SANITY_DIFFICULTY_INTERMEDIATE
+      ? environment().SANITY_DIFFICULTY_INTERMEDIATE
       : sessionDifficulty === 'Legendary'
-      ? process.env.SANITY_DIFFICULTY_LEGENDARY
+      ? environment().SANITY_DIFFICULTY_LEGENDARY
       : null
 
   const questionsQuery = `*[_type == "question" && references('${difficulty}')]{question, answer, _id}`
   const questionsUrl = `${
-    process.env.SANITY_QUERY_URL
+    environment().SANITY_QUERY_URL
   }?query=${encodeURIComponent(questionsQuery)}`
 
   const response = await fetch(questionsUrl)

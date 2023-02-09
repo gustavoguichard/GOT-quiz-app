@@ -17,6 +17,7 @@ import { CountdownCircleTimer } from 'react-countdown-circle-timer'
 import { getUserSession, storage } from '~/utils/session.server'
 import { ArrowLeftIcon, Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
+import { environment } from '~/environment.server'
 
 // Should I use useMatches instead?????🤔🤔
 //
@@ -44,7 +45,7 @@ export async function loader({ request, params }: LoaderArgs) {
 
   const questionQuery = `*[_type == 'question' && slug.current == '${currentSlug}']{question, choices, _id}`
   const questionQueryUrl = `${
-    process.env.SANITY_QUERY_URL
+    environment().SANITY_QUERY_URL
   }?query=${encodeURIComponent(questionQuery)}`
 
   const response = await fetch(questionQueryUrl)

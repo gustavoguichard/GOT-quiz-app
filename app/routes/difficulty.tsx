@@ -11,6 +11,7 @@ import badRequest from '~/utils/badRequest'
 import { getUserSession, storage } from '~/utils/session.server'
 import { Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
+import { environment } from '~/environment.server'
 
 function validateDifficulty(choice: null | FormDataEntryValue) {
   if (choice === null) {
@@ -41,15 +42,15 @@ export async function action({ request }: ActionArgs) {
 
   let difficultyRefecence =
     difficulty === 'Easy'
-      ? process.env.SANITY_DIFFICULTY_EASY
+      ? environment().SANITY_DIFFICULTY_EASY
       : difficulty === 'Intermediate'
-      ? process.env.SANITY_DIFFICULTY_INTERMEDIATE
+      ? environment().SANITY_DIFFICULTY_INTERMEDIATE
       : difficulty === 'Legendary'
-      ? process.env.SANITY_DIFFICULTY_LEGENDARY
+      ? environment().SANITY_DIFFICULTY_LEGENDARY
       : null
 
   // Fetch slugs according to the selected difficulty level and store them to the session
-  const queryUrl = process.env.SANITY_QUERY_URL
+  const { SANITY_QUERY_URL: queryUrl } = environment()
 
   const questionSlugsQuery = `*[_type == 'question' && references('${difficultyRefecence}')]{slug{current}}`
 
