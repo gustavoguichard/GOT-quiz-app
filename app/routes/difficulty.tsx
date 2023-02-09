@@ -1,4 +1,4 @@
-import { Form, useTransition, useActionData } from '@remix-run/react'
+import { Form, useTransition } from '@remix-run/react'
 import type { ActionArgs } from '@remix-run/node'
 import { redirect } from '@remix-run/node'
 import badRequest from '~/utils/badRequest'
@@ -7,6 +7,8 @@ import { Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
 import { environment } from '~/environment.server'
 import { cx } from '~/utils/common'
+import { sanityQuery } from '~/services/sanity'
+import * as z from 'zod'
 
 function validateDifficulty(choice: null | FormDataEntryValue) {
   if (choice === null) {
@@ -44,19 +46,12 @@ export async function action({ request }: ActionArgs) {
       ? environment().SANITY_DIFFICULTY_LEGENDARY
       : null
 
-  // Fetch slugs according to the selected difficulty level and store them to the session
-  const { SANITY_QUERY_URL: queryUrl } = environment()
+  const slugs = await sanityQuery(
+    `*[_type == 'question' && references('${difficultyRefecence}')]`,
+    z.object({ slug: z.object({ current: z.string() }) }),
+  )
 
-  const questionSlugsQuery = `*[_type == 'question' && references('${difficultyRefecence}')]{slug{current}}`
-
-  const questionSlugsUrl = `${queryUrl}?query=${encodeURIComponent(
-    questionSlugsQuery,
-  )}`
-
-  const slugsResponse = await fetch(questionSlugsUrl)
-  const fetchedSlugs = await slugsResponse.json()
-
-  if (!fetchedSlugs) {
+  if (!slugs) {
     throw new Response('There was an error fetching data', {
       status: 404,
     })
@@ -65,9 +60,9 @@ export async function action({ request }: ActionArgs) {
   let firstTen = []
 
   for (let index = 0; index < 10; index++) {
-    let randomIndex = Math.floor(Math.random() * fetchedSlugs.result.length)
-    firstTen.push(fetchedSlugs.result[randomIndex])
-    fetchedSlugs.result.splice(randomIndex, 1)
+    let randomIndex = Math.floor(Math.random() * slugs.length)
+    firstTen.push(slugs[randomIndex])
+    slugs.splice(randomIndex, 1)
   }
 
   const numberOfQuestions = firstTen.length
@@ -92,7 +87,6 @@ export async function action({ request }: ActionArgs) {
 
 export default function Difficulty() {
   const transition = useTransition()
-  const actionData = useActionData()
 
   return (
     <main className="h-screen w-full bg-[url('/got-mobile-wallpaper.png')] bg-cover bg-center bg-no-repeat text-white lg:bg-[url('/got-desktop-wallpaper.png')]">
@@ -142,11 +136,6 @@ export default function Difficulty() {
               Legendary
             </label>
           </div>
-          {actionData?.difficultyFieldError?.name ? (
-            <span className="text-red-500">
-              {actionData.difficultyFieldError.name}
-            </span>
-          ) : null}
           <button
             className={cx(
               'mt-4 grid h-12  w-32 place-items-center bg-gradient-to-b from-[#FF512F] to-[#F09819] text-black',

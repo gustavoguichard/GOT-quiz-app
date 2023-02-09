@@ -12,8 +12,9 @@ import { CountdownCircleTimer } from 'react-countdown-circle-timer'
 import { getUserSession, storage } from '~/utils/session.server'
 import { ArrowLeftIcon, Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
-import { environment } from '~/environment.server'
 import { cx } from '~/utils/common'
+import { sanityQuery } from '~/services/sanity'
+import * as z from 'zod'
 
 // Should I use useMatches instead?????🤔🤔
 //
@@ -37,15 +38,14 @@ import { cx } from '~/utils/common'
 // Navigate to the next question
 
 export async function loader({ request, params }: LoaderArgs) {
-  const currentSlug = params.slug
-
-  const questionQuery = `*[_type == 'question' && slug.current == '${currentSlug}']{question, choices, _id}`
-  const questionQueryUrl = `${
-    environment().SANITY_QUERY_URL
-  }?query=${encodeURIComponent(questionQuery)}`
-
-  const response = await fetch(questionQueryUrl)
-  const question = await response.json()
+  const question = await sanityQuery(
+    `*[_type == 'question' && slug.current == '${params.slug}']`,
+    z.object({
+      _id: z.string(),
+      choices: z.array(z.string()),
+      question: z.string(),
+    }),
+  )
 
   if (!question) {
     throw new Response('There was an error fetching data', {
@@ -60,21 +60,21 @@ export async function loader({ request, params }: LoaderArgs) {
   const difficulty = session.get('difficulty')
 
   // This is used to set the current position in the questions e.g 1/10
-  if (attemptedSlugsArray.includes(currentSlug)) {
+  if (attemptedSlugsArray.includes(params.currentSlug)) {
     attemptedSlugsArray.pop()
   } else {
-    attemptedSlugsArray.push(currentSlug)
+    attemptedSlugsArray.push(params.currentSlug)
   }
 
   session.set('attemptedSlugsArray', attemptedSlugsArray)
 
   const userChoice = userChoices.find(
-    (element: any) => element.userQuestionSlug === currentSlug,
+    (element: any) => element.userQuestionSlug === params.currentSlug,
   )
   if (userChoice) {
     return json(
       {
-        question: question.result,
+        question,
         numberOfQuestions,
         userChoice,
         attemptedSlugsArray,
@@ -90,10 +90,11 @@ export async function loader({ request, params }: LoaderArgs) {
 
   return json(
     {
-      question: question.result,
+      question,
       numberOfQuestions,
       attemptedSlugsArray,
       difficulty,
+      userChoice: null,
     },
     {
       headers: {
@@ -172,7 +173,7 @@ export default function Question() {
     userChoice,
     attemptedSlugsArray,
     difficulty,
-  } = useLoaderData()
+  } = useLoaderData<typeof loader>()
 
   const transition = useTransition()
 

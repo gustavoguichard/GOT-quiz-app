@@ -3,7 +3,9 @@ import { json } from '@remix-run/node'
 import { useLoaderData } from '@remix-run/react'
 import { XIcon } from '~/components/Icon'
 import { environment } from '~/environment.server'
+import { sanityQuery } from '~/services/sanity'
 import { getUserSession } from '~/utils/session.server'
+import * as z from 'zod'
 
 export async function loader({ request }: LoaderArgs) {
   const session = await getUserSession(request)
@@ -19,26 +21,22 @@ export async function loader({ request }: LoaderArgs) {
       ? environment().SANITY_DIFFICULTY_LEGENDARY
       : null
 
-  const questionsQuery = `*[_type == "question" && references('${difficulty}')]{question, answer, _id}`
-  const questionsUrl = `${
-    environment().SANITY_QUERY_URL
-  }?query=${encodeURIComponent(questionsQuery)}`
+  const questions = await sanityQuery(
+    `*[_type == "question" && references('${difficulty}')]`,
+    z.object({ answer: z.string(), _id: z.string(), question: z.string() }),
+  )
 
-  const response = await fetch(questionsUrl)
-  const questions = await response.json()
-
-  return json({ userChoices, questions: questions.result })
+  return json({ userChoices, questions })
 }
 
 export default function Results() {
-  const { userChoices, questions } = useLoaderData()
+  const { userChoices, questions } = useLoaderData<typeof loader>()
 
   const qandA = userChoices.map((choice: any) => {
     let matchedQuestion = questions.find(
       (question: any) => question._id === choice.userQuestion,
     )
-    matchedQuestion.userChoice = choice.userChoice
-    return matchedQuestion
+    return { ...matchedQuestion, userChoice: choice.userChoice }
   })
 
   return (

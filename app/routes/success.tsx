@@ -5,6 +5,8 @@ import { Logo } from '~/components/Icon'
 import { getUserSession, storage } from '~/utils/session.server'
 import { environment } from '~/environment.server'
 import { cx } from '~/utils/common'
+import { sanityQuery } from '~/services/sanity'
+import * as z from 'zod'
 
 export function meta() {
   return {
@@ -26,13 +28,10 @@ export async function loader({ request }: LoaderArgs) {
       ? environment().SANITY_DIFFICULTY_LEGENDARY
       : null
 
-  const questionsQuery = `*[_type == "question" && references('${difficulty}')]{ answer, _id}`
-  const questionsUrl = `${
-    environment().SANITY_QUERY_URL
-  }?query=${encodeURIComponent(questionsQuery)}`
-
-  const response = await fetch(questionsUrl)
-  const questions = await response.json()
+  const questions = await sanityQuery(
+    `*[_type == "question" && references('${difficulty}')]`,
+    z.object({ answer: z.string(), _id: z.string() }),
+  )
   if (!questions) {
     throw new Response('There was an error fetching data', {
       status: 404,
@@ -40,7 +39,7 @@ export async function loader({ request }: LoaderArgs) {
   }
 
   const correctAnswers = userChoices.map((userChoice: any) => {
-    const matchedQuestions = questions.result.filter(
+    const matchedQuestions = questions.filter(
       (question: any) =>
         question._id === userChoice.userQuestion &&
         question.answer === userChoice.userChoice,
@@ -68,7 +67,7 @@ export async function action({ request }: ActionArgs) {
 }
 
 export default function Success() {
-  const data = useLoaderData()
+  const data = useLoaderData<typeof loader>()
   const correct = data.filter((q: any) => q.length !== 0)
   const percentage = Math.round((correct.length / data.length) * 100)
 
