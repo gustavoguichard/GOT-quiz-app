@@ -4,6 +4,7 @@ import { redirect } from '@remix-run/node'
 import { Logo } from '~/components/Icon'
 import { getUserSession, storage } from '~/utils/session.server'
 import { environment } from '~/environment.server'
+import { cx } from '~/utils/common'
 
 export function meta() {
   return {
@@ -132,27 +133,27 @@ function ProgressRing({ percentage }: { percentage: number }) {
         cy={50}
       />
       <circle
-        className={`${
+        className={cx(
           percentage < 30
             ? 'text-red-500'
             : percentage > 30 && percentage < 60
             ? 'text-yellow-500'
-            : 'text-green-600'
-        }`}
+            : 'text-green-600',
+        )}
         strokeWidth={5}
         strokeDasharray={[dash, circumference - dash] as any}
         transform={`rotate(-90 50 50)`}
         strokeLinecap="round"
         stroke="currentColor"
-        fill={`${
+        fill={cx(
           percentage < 30
             ? 'rgb(254 242 242)'
             : percentage > 30 && percentage < 60
             ? 'rgb(255 247 237)'
             : percentage > 60
             ? 'rgb(240 253 244)'
-            : 'transparent'
-        }`}
+            : 'transparent',
+        )}
         r={45}
         cx={50}
         cy={50}

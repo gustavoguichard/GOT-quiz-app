@@ -6,6 +6,7 @@ import { getUserSession, storage } from '~/utils/session.server'
 import { Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
 import { environment } from '~/environment.server'
+import { cx } from '~/utils/common'
 
 function validateDifficulty(choice: null | FormDataEntryValue) {
   if (choice === null) {
@@ -147,9 +148,10 @@ export default function Difficulty() {
             </span>
           ) : null}
           <button
-            className={`mt-4 grid h-12  w-32 place-items-center bg-gradient-to-b from-[#FF512F] to-[#F09819] text-black ${
-              transition.submission ? 'pl-3' : ''
-            }`}
+            className={cx(
+              'mt-4 grid h-12  w-32 place-items-center bg-gradient-to-b from-[#FF512F] to-[#F09819] text-black',
+              transition.submission && 'pl-3',
+            )}
           >
             {transition.submission ? <Spinner /> : 'Continue'}
           </button>

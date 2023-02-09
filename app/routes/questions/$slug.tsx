@@ -13,6 +13,7 @@ import { getUserSession, storage } from '~/utils/session.server'
 import { ArrowLeftIcon, Logo } from '~/components/Icon'
 import Spinner from '~/components/Spinner'
 import { environment } from '~/environment.server'
+import { cx } from '~/utils/common'
 
 // Should I use useMatches instead?????🤔🤔
 //
@@ -243,9 +244,10 @@ export default function Question() {
         </div>
         <button
           type="submit"
-          className={`relative mt-4 grid h-12 w-36 place-content-center bg-black text-white ${
-            transition.submission ? 'pl-3' : ''
-          }`}
+          className={cx(
+            'relative mt-4 grid h-12 w-36 place-content-center bg-black text-white',
+            transition.submission && 'pl-3',
+          )}
         >
           {transition.submission ? <Spinner /> : 'Next'}
         </button>
