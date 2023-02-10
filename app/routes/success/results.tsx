@@ -1,50 +1,22 @@
 import type { LoaderArgs } from '@remix-run/node'
-import { json } from '@remix-run/node'
 import { useLoaderData } from '@remix-run/react'
 import { XIcon } from '~/components/Icon'
-import { getUserSession } from '~/utils/session.server'
+import { envFromSession } from '~/utils/session.server'
+import { getUserResults } from '~/domain/questions.server'
+import { loaderResponseOrThrow } from '~/utils/responses'
 
 export async function loader({ request }: LoaderArgs) {
-  const session = await getUserSession(request)
-  const sessionDifficulty = session.get('difficulty')
-  const userChoices = session.get('userChoices')
-
-  let difficulty =
-    sessionDifficulty === 'Easy'
-      ? process.env.SANITY_DIFFICULTY_EASY
-      : sessionDifficulty === 'Intermediate'
-      ? process.env.SANITY_DIFFICULTY_INTERMEDIATE
-      : sessionDifficulty === 'Legendary'
-      ? process.env.SANITY_DIFFICULTY_LEGENDARY
-      : null
-
-  const questionsQuery = `*[_type == "question" && references('${difficulty}')]{question, answer, _id}`
-  const questionsUrl = `${
-    process.env.SANITY_QUERY_URL
-  }?query=${encodeURIComponent(questionsQuery)}`
-
-  const response = await fetch(questionsUrl)
-  const questions = await response.json()
-
-  return json({ userChoices, questions: questions.result })
+  const result = await getUserResults(null, await envFromSession(request))
+  return loaderResponseOrThrow(result)
 }
 
 export default function Results() {
-  const { userChoices, questions } = useLoaderData()
-
-  const qandA = userChoices.map((choice: any) => {
-    let matchedQuestion = questions.find(
-      (question: any) => question._id === choice.userQuestion,
-    )
-    matchedQuestion.userChoice = choice.userChoice
-    return matchedQuestion
-  })
-
+  const { results } = useLoaderData<typeof loader>()
   return (
     <div className="h-full bg-[#f8fbf8] px-8 py-3">
       <h2 className="font-semibold">Results</h2>
       <ol className="list-decimal">
-        {qandA.map((question: any, index: number) => (
+        {results.map((question) => (
           <li key={question._id} className="my-3">
             <p>{question.question}</p>
             <div className="flex flex-wrap items-center gap-x-2 text-gray-500">

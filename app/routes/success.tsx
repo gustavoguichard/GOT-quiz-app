@@ -1,12 +1,12 @@
-import { Form, Link, Outlet, useCatch, useLoaderData } from '@remix-run/react'
-import type {
-  ActionArgs,
-  ErrorBoundaryComponent,
-  LoaderArgs,
-} from '@remix-run/node'
+import { Form, Link, Outlet, useLoaderData } from '@remix-run/react'
+import type { ActionArgs, LoaderArgs } from '@remix-run/node'
 import { redirect } from '@remix-run/node'
 import { Logo } from '~/components/Icon'
-import { getUserSession, storage } from '~/utils/session.server'
+import { envFromSession, getUserSession, storage } from '~/utils/session.server'
+import { cx } from '~/utils/common'
+import { getResultsCount } from '~/domain/questions.server'
+import { loaderResponseOrThrow } from '~/utils/responses'
+import { inputFromForm } from 'domain-functions'
 
 export function meta() {
   return {
@@ -15,51 +15,15 @@ export function meta() {
 }
 
 export async function loader({ request }: LoaderArgs) {
-  const session = await getUserSession(request)
-  const sessionDifficulty = session.get('difficulty')
-  const userChoices = session.get('userChoices')
-
-  let difficulty =
-    sessionDifficulty === 'Easy'
-      ? process.env.SANITY_DIFFICULTY_EASY
-      : sessionDifficulty === 'Intermediate'
-      ? process.env.SANITY_DIFFICULTY_INTERMEDIATE
-      : sessionDifficulty === 'Legendary'
-      ? process.env.SANITY_DIFFICULTY_LEGENDARY
-      : null
-
-  const questionsQuery = `*[_type == "question" && references('${difficulty}')]{ answer, _id}`
-  const questionsUrl = `${
-    process.env.SANITY_QUERY_URL
-  }?query=${encodeURIComponent(questionsQuery)}`
-
-  const response = await fetch(questionsUrl)
-  const questions = await response.json()
-  if (!questions) {
-    throw new Response('There was an error fetching data', {
-      status: 404,
-    })
-  }
-
-  const correctAnswers = userChoices.map((userChoice: any) => {
-    const matchedQuestions = questions.result.filter(
-      (question: any) =>
-        question._id === userChoice.userQuestion &&
-        question.answer === userChoice.userChoice,
-    )
-
-    return matchedQuestions
-  })
-
-  return correctAnswers
+  const result = await getResultsCount(null, await envFromSession(request))
+  return loaderResponseOrThrow(result)
 }
 
 export async function action({ request }: ActionArgs) {
   const session = await getUserSession(request)
-  const formData = await request.formData()
-  const action = formData.get('_action')
+  const input = await inputFromForm(request)
 
-  if (action === 'clear') {
+  if (input._action === 'clear') {
     return redirect('/difficulty', {
       headers: {
         'Set-Cookie': await storage.destroySession(session),
@@ -69,10 +33,9 @@ export async function action({ request }: ActionArgs) {
   return null
 }
 
-export default function Success() {
-  const data = useLoaderData()
-  const correct = data.filter((q: any) => q.length !== 0)
-  const percentage = Math.round((correct.length / data.length) * 100)
+export default () => {
+  const { answersCount, correctCount, percentage } =
+    useLoaderData<typeof loader>()
 
   return (
     <main className="mx-auto px-8 pb-16 text-gray-800 sm:w-4/5 sm:px-0 xl:max-w-4xl">
@@ -89,10 +52,9 @@ export default function Success() {
               </div>
               <div className="space-y-4">
                 <span className="">
-                  You got{' '}
-                  <span className="font-semibold">{correct.length}</span> out of{' '}
-                  <span className="font-semibold">{data.length}</span> questions
-                  correct
+                  You got <span className="font-semibold">{correctCount}</span>{' '}
+                  out of <span className="font-semibold">{answersCount}</span>{' '}
+                  questions correct
                 </span>
                 <Link to="/success/results" className="block underline">
                   View results
@@ -135,27 +97,27 @@ function ProgressRing({ percentage }: { percentage: number }) {
         cy={50}
       />
       <circle
-        className={`${
+        className={cx(
           percentage < 30
             ? 'text-red-500'
             : percentage > 30 && percentage < 60
             ? 'text-yellow-500'
-            : 'text-green-600'
-        }`}
+            : 'text-green-600',
+        )}
         strokeWidth={5}
         strokeDasharray={[dash, circumference - dash] as any}
         transform={`rotate(-90 50 50)`}
         strokeLinecap="round"
         stroke="currentColor"
-        fill={`${
+        fill={cx(
           percentage < 30
             ? 'rgb(254 242 242)'
             : percentage > 30 && percentage < 60
             ? 'rgb(255 247 237)'
             : percentage > 60
             ? 'rgb(240 253 244)'
-            : 'transparent'
-        }`}
+            : 'transparent',
+        )}
         r={45}
         cx={50}
         cy={50}
@@ -165,43 +127,5 @@ function ProgressRing({ percentage }: { percentage: number }) {
         {percentage}%
       </text>
     </svg>
-  )
-}
-
-export function CatchBoundary() {
-  const caught = useCatch()
-  return (
-    <div className="grid h-screen w-full place-items-center bg-black bg-opacity-50 bg-[url('https://i.pinimg.com/originals/10/c7/ba/10c7badbea3bcd027b202f6134f8020c.jpg')] bg-cover bg-center bg-no-repeat bg-blend-overlay">
-      <div className="text-white">
-        <h1 className="text-4xl font-bold">Oops!!</h1>
-        <p>Status: {caught.status}</p>
-        <pre>
-          <code>{caught.data}</code>
-        </pre>
-        <div className="mt-4 flex justify-center">
-          <Link to="/difficulty" className="bg-white px-6 py-3 text-black">
-            Try again
-          </Link>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export const ErrorBoundary: ErrorBoundaryComponent = ({ error }) => {
-  console.log({ error: error.message })
-  return (
-    <div className="grid h-screen w-full place-items-center bg-black bg-opacity-40 bg-[url('https://media1.popsugar-assets.com/files/thumbor/hD4DY5UeYUO_rmi7BbQw05P03vw/fit-in/2048xorig/filters:format_auto-!!-:strip_icc-!!-/2019/05/19/288/n/1922283/3c59feec5ce2412a2a2935.47224303__6_Courtesy_of_HBO/i/Why-Daenerys-Targaryen-Death-So-Damn-LAME.jpg')] bg-cover bg-center bg-no-repeat text-white bg-blend-overlay">
-      <div>
-        <h1 className="text-center text-4xl font-bold">
-          Oops!! Something's not right
-        </h1>
-        <div className="mt-4 flex justify-center">
-          <Link to="/difficulty" className="bg-white px-6 py-3 text-black">
-            Try again
-          </Link>
-        </div>
-      </div>
-    </div>
   )
 }

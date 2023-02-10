@@ -1,6 +1,6 @@
 import type { ActionArgs } from '@remix-run/node'
 import { Link, useActionData } from '@remix-run/react'
-import badRequest from '~/utils/badRequest'
+import { badRequest } from '~/utils/responses'
 import { createUserSession, login } from '~/utils/session.server'
 import { validateEmail, validatePassword } from '~/utils/validation'
 

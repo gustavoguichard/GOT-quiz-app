@@ -1,6 +1,8 @@
+import { environment } from '~/environment.server'
 import { redirect, createCookieSessionStorage } from '@remix-run/node'
 import bcrypt from 'bcryptjs'
-//import { getClient } from "~/lib/sanity/getClient";
+import { difficultySchema } from '~/domain/difficulty'
+import * as z from 'zod'
 
 // Login logic
 //
@@ -32,16 +34,11 @@ export async function login(email: string, password: string) {
   return registeredUser.result[0]
 }
 
-const sessionSecret = process.env.SESSION_SECRET
-if (!sessionSecret) {
-  throw new Error('SESSION_SECRET must be set')
-}
-
 export const storage = createCookieSessionStorage({
   cookie: {
     name: 'GOT_session',
     secure: true,
-    secrets: [sessionSecret],
+    secrets: [environment().SESSION_SECRET],
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 30,
@@ -63,64 +60,32 @@ export function getUserSession(request: Request) {
   return storage.getSession(request.headers.get('Cookie'))
 }
 
-export async function getUserId(request: Request) {
+export async function envFromSession(request: Request) {
   const session = await getUserSession(request)
-  const userId = session.get('userId')
-  if (!userId || typeof userId !== 'string') return null
-  return userId
+  return session.data
 }
 
-export async function requireUserId(
-  request: Request,
-  redirectTo = new URL(request.url).pathname,
-) {
-  const session = await getUserSession(request)
-  const userId = session.get('userId')
-  if (!userId || typeof userId !== 'string') {
-    const searchParams = new URLSearchParams([['redirectTo', redirectTo]])
-    throw redirect(`/login?${searchParams}`)
-  }
-  return userId
-}
-
-export async function getUser(request: Request) {
-  const userId = await getUserId(request)
-  if (typeof userId !== 'string') {
-    return null
-  }
-  try {
-    const query = `*[_type == 'user' && _id == '${userId}']{email, username, password, _id}`
-    const queryUrl = 'https://n2tvwman.api.sanity.io/v1/data/query/production'
-    const url = `${queryUrl}?query=${encodeURIComponent(query)}`
-    const response = await fetch(url)
-    const user = await response.json()
-    return user.result[0]
-  } catch {
-    throw logout(request)
-  }
-}
+export const sessionSchema = z.object({
+  attemptedSlugsArray: z.array(z.string()).optional().default([]),
+  difficulty: difficultySchema.optional(),
+  slugs: z.array(z.string()).optional().default([]),
+  userChoices: z
+    .array(
+      z.object({
+        userChoice: z.string().nullable(),
+        userQuestion: z.string(),
+        userQuestionSlug: z.string(),
+      }),
+    )
+    .optional()
+    .default([]),
+})
 
 export async function logout(request: Request) {
   const session = await storage.getSession(request.headers.get('Cookie'))
   return redirect('/login', {
     headers: {
       'Set-Cookie': await storage.destroySession(session),
-    },
-  })
-}
-
-export async function addItemToStorage(
-  request: Request,
-  itemKey: string,
-  itemValue: unknown,
-) {
-  const session = await getUserSession(request)
-  //const session = await storage.getSession();
-  session.set(itemKey, itemValue)
-  //console.log('Session difficulty:', session.get(itemKey));
-  return redirect('/questions', {
-    headers: {
-      'Set-Cookie': await storage.commitSession(session),
     },
   })
 }
